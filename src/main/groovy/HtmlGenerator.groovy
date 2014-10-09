@@ -33,6 +33,8 @@ class HtmlGenerator extends XmiParser {
   // NOTE: can make propTypes a localField in createDetailPages() and pass as arg to dumpAttributes()
   final def propTypes = [:]
 
+  final Set<String> types = new TreeSet<>()
+
   final Set<IndexInfo> index = new TreeSet<>()
 
   final Set<String> interfaceSet = new HashSet<>()

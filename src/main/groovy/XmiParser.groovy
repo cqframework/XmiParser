@@ -151,8 +151,6 @@ attribute types:
         YesNo
  */
 
-  final Set<String> types = new TreeSet<>()
-
   static boolean validate
 
   protected static final Map<String, String> EMPTY_MAP = Collections.<String, String> emptyMap()
