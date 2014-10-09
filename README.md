@@ -6,7 +6,10 @@ javadoc generation. Given XMI XML input file it creates simple
 structures to enable subclasses to quickly validate, generate
 HTML from the model or convert to other forms.
 
-Parser will iterate over each element and package in the model.
+The package is a collection of a few Groovy classes. The base XmiParser class
+does all the parsing of the XMI model iterating over each element and package
+in the model then adding those to several data structures including lookup
+tables to walk through the model.
 
 The HTML generator generates javadoc-like HTML documentation
 with javadoc summary pages and detailed class-level pages.
@@ -24,6 +27,10 @@ listing of all attributes for each class or interface (e.g. xxx.xmi-details.txt)
 Note that Enterprise Architect can export EAP models as XMI 1.1 or 2.1.
 XMI file must be version 2.1 and UML must be 2.1 or 2.2. Other versions
 are not supported by the parser.
+
+# Running
+
+Build the project runnning gradle with compileGroovy task.
 
 # License
 
