@@ -30,7 +30,18 @@ are not supported by the parser.
 
 # Running
 
-Build the project runnning gradle with compileGroovy task.
+Build the project runnning [Gradle](http://www.gradle.org) with compileGroovy task.
+
+To run on the sample XMI file try run.bat which runs a main script
+that either validates the model or generate html documentation.
+
+The following assumes you already have [Groovy](http://groovy.codehaus.org/) installed.
+
+> run.bat
+
+To generate HTML javadoc documentation add the "-h" argument:
+
+> run.bat -h
 
 # License
 
