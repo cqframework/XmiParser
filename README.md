@@ -28,20 +28,36 @@ Note that Enterprise Architect can export EAP models as XMI 1.1 or 2.1.
 XMI file must be version 2.1 and UML must be 2.1 or 2.2. Other versions
 are not supported by the parser.
 
-# Running
+# How to build
 
-Build the project runnning [Gradle](http://www.gradle.org) with compileGroovy task.
+XmiParser uses [Gradle](http://www.gradle.org) as a build tool. Since gradle is awesome you actually don't have to install gradle,
+you just need a working JDK installation.
+
+To compile and run all the tests:
+
+    gradlew test
+
+The first time you run this it will download and install gradle. Downloaded files (including the Gradle
+distribution itself) will be stored in the Gradle user home directory (typically "<user_home>/.gradle").
+Subsequent runs will be much faster.
+
+If you already have gradle installed then you can use the command gradle in place of gradlew as
+listed above.
+
+    gradle test
+
+# Running
 
 To run on the sample XMI file try run.bat which runs a main script
 that either validates the model or generate html documentation.
 
 The following assumes you already have [Groovy](http://groovy.codehaus.org/) installed.
 
-> run.bat
+    run.bat
 
 To generate HTML javadoc documentation add the "-h" argument:
 
-> run.bat -h
+    run.bat -h
 
 # License
 
