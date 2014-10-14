@@ -106,8 +106,6 @@ class HtmlGenerator extends XmiParser {
     // createIndexPage must be called last since all other pages must be created first
     createIndexPage()
 
-    // println "types=$types" // debug
-
     if (outWriter) {
       outWriter.close() // debug
     }
