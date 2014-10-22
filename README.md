@@ -41,7 +41,7 @@ The first time you run this it will download and install gradle. Downloaded file
 distribution itself) will be stored in the Gradle user home directory (typically "<user_home>/.gradle").
 Subsequent runs will be much faster.
 
-If you already have gradle installed then you can use the command gradle in place of gradlew as
+If you already have Gradle installed then you can substiute the command gradle in place of gradlew as
 listed above.
 
     gradle test

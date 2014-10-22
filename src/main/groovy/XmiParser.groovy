@@ -433,17 +433,25 @@ void createSummary() {
 
 void checkPackage(groovy.util.slurpersupport.NodeChild elementContainer, String packageName) {
 
-  packageCtx.addLast(packageName)
-
   // <packagedElement xmi:type="uml:Package" xmi:id="EAPK_9920A293_4250_4281_9829_981965BBBD53" name="action" visibility="public">
   packageMap.put(elementContainer.'@xmi:id'.text(), packageName)
 
-  // TODO: need to generalize the full package name for other structures as needed
-  // this only works for QIDAM and QUICK with 2-level deep packages ignoring the outer most package
-  if (packageCtx.size() == 3 && packageCtx.getFirst() ==~ /(QIDAM|QUICK) Class Model/) {
-    packageName = packageCtx.get(1) + '/' + packageName
-    // e.g. package context: [QIDAM Class Model, action, common] for Dosage class => pkg = action/common
+  if ((shortTitle == 'QUICK' || shortTitle == ' QIDAM') && !packageCtx.isEmpty()) {
+    // handle nested packages but ignore top-level informational package names
+    // TODO: need to generalize the full package name for other structures as needed
+    // this only works for QIDAM and QUICK with 2-level deep packages ignoring the outer most package
+    if (packageCtx.size() == 2 && packageCtx.getFirst() ==~ /(QIDAM|QUICK) Class Model/) {
+      // if XMI exported from QUICK Class Model node
+      packageName = packageCtx.getLast() + '/' + packageName
+      // e.g. package context: [QIDAM Class Model, action, common] for Dosage class => pkg = action/common
+    } else if (packageCtx.size() == 3 && packageCtx.getFirst() == 'Model') {
+      // if XMI exported from top-level Model node
+      // latest QUICK adds new top-level package Model which includes 'QUICK Class Model'
+      packageName = packageCtx.getLast() + '/' + packageName
+    }
   }
+
+  packageCtx.addLast(packageName)
 
   //printf 'X: %d package: %s%n', packageCtx.size(), packageCtx // debug
 
