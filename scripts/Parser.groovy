@@ -11,12 +11,14 @@
 boolean validate = false
 boolean html = false
 boolean summary = false
+boolean cs = false
 File file
 args.each { arg ->
   if (arg.startsWith('-')) {
     if ('-v' == arg) validate = true
 	else if ('-s' == arg) summary = true
     else if ('-h' == arg) html = true
+	else if ('-cs' == arg) cs = true
     else throw new IllegalArgumentException("unknown option: $arg")
   } else {
     file = new File(arg)
@@ -42,7 +44,22 @@ if (html) {
       println "\t$it"
     }
   }
-} else {  
+} else if (cs) {
+  def parser = new CoffeescriptGenerator(file)
+  XmiParser.validate = validate
+  parser.init()
+  parser.output()
+  def types = new ArrayList()  
+  parser.types.each {
+    if (!parser.elements.containsKey(it)) types.add(it)
+  }
+  if (types) {
+    println '\nTypes:\n'
+    types.each {
+      println "\t$it"
+    }
+  }
+}else {  
   XmiParser.validate = validate
   def parser = new XmiValidator(file)
   parser.init()
