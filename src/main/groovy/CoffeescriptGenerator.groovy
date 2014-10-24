@@ -35,6 +35,52 @@ class CoffeescriptGenerator extends XmiParser {
 		'Value'
 	]
 
+	static final Set primitiveTypes = [
+		'string',
+		'boolean',
+		'id',
+		'uri',
+		'oid',
+		'decimal',
+		'date',
+		'code',
+		"date-union",
+		'string-primitive',
+		'boolean-primitive',
+		'id-primitive',
+		'uri-primitive',
+		'oid-primitive',
+		'decimal-primitive',
+		'date-primitive',
+		'code-primitive',
+		'uri-primitive',
+		'base64Binary',
+		'base64Binary-primitive'
+	]
+
+	static final Set ignoreTypes = [
+		'string',
+		'boolean',
+		'id',
+		'uri',
+		'oid',
+		'decimal',
+		'date',
+		'code',
+		"date-union",
+		'string-primitive',
+		'boolean-primitive',
+		'id-primitive',
+		'uri-primitive',
+		'oid-primitive',
+		'decimal-primitive',
+		'date-primitive',
+		'code-primitive',
+		'uri-primitive',
+		'base64Binary',
+		'base64Binary-primitive'
+	]
+
 	// NOTE: can make propTypes a localField in createDetailPages() and pass as arg to dumpAttributes()
 	final def propTypes = [:]
 
@@ -133,7 +179,7 @@ class CoffeescriptGenerator extends XmiParser {
 
 		String type = elt.'@xmi:type'.text()
 		boolean isInterface = type == 'uml:Interface'
-		if (isInterface) {
+		if (isInterface || ignoreTypes.contains(name)) {
 			return
 		}
 
@@ -191,7 +237,7 @@ class CoffeescriptGenerator extends XmiParser {
 		writer.sb("super()")
 		writer.eb(" ")
 		writer.eb("")
-		
+
 		Collection namedAttrs = new ArrayList()
 		Set subinterfaces = new TreeSet()
 
@@ -292,12 +338,12 @@ class CoffeescriptGenerator extends XmiParser {
 			println namedAttrs
 			namedAttrs.each { attr ->
 				if (attr instanceof groovy.util.slurpersupport.Attributes) {
-					
+
 					parentName = attr.text()
-					
+
 				}
 				else{
-					 parentName = sortedAttrMap.get(attr)
+					parentName = sortedAttrMap.get(attr)
 					// add attribute to sorted set for file output
 					// class/interface name
 					// attribute - [inherited from class/interface] description
@@ -326,30 +372,39 @@ class CoffeescriptGenerator extends XmiParser {
 
 
 	void writeField(writer,name, type, multi){
-		if(multi){
-			writeMultiField(writer,name,type)
+		def prim = primitiveTypes.contains(type)
+		if(multi ){
+			writeMultiField(writer,name,type,prim)
 		}
 		else{
-			writeSingleField(writer,name,type)
+			writeSingleField(writer,name,type,prim)
 		}
 	}
 
-	void writeMultiField(writer,name,type){
-		writer.sb( "$name: -> ")
-		writer.sb("for x in @json['$name'] ")
-		writer.sb("new $type(x)")
-		writer.eb(" ")
-		writer.eb(" ")
-		writer.eb()
-
+	void writeMultiField(writer,name,type,primitive){
+		if(primitive){
+			writer.sb("$name: ->  @json['$name'] ")
+			writer.eb(" ")
+			writer.puts(" ")
+		}else{
+			writer.sb( "$name: -> ")
+			writer.sb("for x in @json['$name'] ")
+			writer.sb("new $type(x)")
+			writer.eb(" ")
+			writer.eb(" ")
+			writer.eb()
+		}
 
 	}
 
-	void writeSingleField(writer, name,type){
-		writer.sb("$name: -> new $type( @json['$name'] )")
+	void writeSingleField(writer, name,type,primitive){
+		if(primitive)
+			writer.sb("$name: ->  @json['$name'] ")
+		else
+			writer.sb("$name: -> new $type( @json['$name'] )")
 		writer.eb(" ")
-		writer.eb(" ")
-		
+		writer.puts(" ")
+
 	}
 
 	// ---------------------------------------------------------
@@ -615,7 +670,7 @@ class CoffeescriptGenerator extends XmiParser {
 			for(int i=0;i< indent;i++){
 				str += " "
 			}
-			currentIndent = str		
+			currentIndent = str
 		}
 		void close(){
 			writer.flush();
