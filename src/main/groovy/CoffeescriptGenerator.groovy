@@ -55,7 +55,18 @@ class CoffeescriptGenerator extends XmiParser {
 		'code-primitive',
 		'uri-primitive',
 		'base64Binary',
-		'base64Binary-primitive'
+		'base64Binary-primitive',
+		'dateTime-primitive',
+		'dateTime-union',
+		'dateTime',
+		'integer-primitive',
+		"integer",
+		"instant",
+		"instant-primitive",
+		"extension-choice",
+		"uuid",
+		"uuid-primitive",
+		"fhir_Schedule"
 	]
 
 	static final Set ignoreTypes = [
@@ -78,7 +89,18 @@ class CoffeescriptGenerator extends XmiParser {
 		'code-primitive',
 		'uri-primitive',
 		'base64Binary',
-		'base64Binary-primitive'
+		'base64Binary-primitive',
+		'dateTime-primitive',
+		'dateTime-union',
+		'dateTime',
+		'integer-primitive',
+		"integer",
+		"instant",
+		"instant-primitive",
+		"extension-choice",
+		"uuid",
+		"uuid-primitive",
+		"fhir_Schedule"
 	]
 
 	// NOTE: can make propTypes a localField in createDetailPages() and pass as arg to dumpAttributes()
@@ -106,13 +128,6 @@ class CoffeescriptGenerator extends XmiParser {
 		interfaceSet.addAll(interfaces)
 	}
 
-	// -----------------------------------------------
-
-	void checkAggregation(String role, String targetName) {
-		// add aggregate property to Index
-		index.add(new IndexInfo(role, targetName + ".html#$role",
-				"Aggregate field in <a href='pages/${targetName}.html'>$targetName</a>"))
-	}
 
 	// -----------------------------------------------
 
@@ -128,7 +143,7 @@ class CoffeescriptGenerator extends XmiParser {
 			return
 		}
 
-		File pageDir = new File('coffeescript/')
+		File pageDir = new File('coffeescript/quick')
 		if (!pageDir.exists()) pageDir.mkdirs()
 		outWriter = new PrintWriter(new FileWriter(file.getName() + "-details.txt")) // debug
 		createDetailPages()
@@ -179,7 +194,7 @@ class CoffeescriptGenerator extends XmiParser {
 
 		String type = elt.'@xmi:type'.text()
 		boolean isInterface = type == 'uml:Interface'
-		if (isInterface || ignoreTypes.contains(name)) {
+		if (isInterface || ignoreTypes.contains(name) || name.startsWith('fhir:')) {
 			return
 		}
 
@@ -187,7 +202,7 @@ class CoffeescriptGenerator extends XmiParser {
 		String nameOut = escapeName(name) // e.g. for RIM with <'s in names
 		flatListMode = flatList
 
-		def writer = new WrappedWriter(new FileWriter("coffeescript/${nameOut}.js.coffee"))
+		def writer = new WrappedWriter(new FileWriter("coffeescript/quick/${nameOut}.js.coffee"))
 
 
 		// <packagedElement xmi:type="uml:Class"
@@ -232,7 +247,20 @@ class CoffeescriptGenerator extends XmiParser {
 				}
 			} // each connector reference
 		} // refs.isEmpty()
-		writer.puts("class $name")
+
+		writeHeader(writer)
+		String desc = propDesc[name]
+
+		writer.ln("###*");
+		if (desc){
+			writer.ln(desc)
+			writer.ln(" ")
+		}
+
+		writer.ln("@class $name");
+		writer.ln("@exports  $name as quick.$name");
+		writer.ln("###");
+		writer.puts("class QUICK.$name")
 		writer.sb("constructor: (@json) ->")
 		writer.sb("super()")
 		writer.eb(" ")
@@ -355,8 +383,8 @@ class CoffeescriptGenerator extends XmiParser {
 					String outType = propType
 					String key = "${parentName}.${attr}"
 					String multiplicityValue = multiplicity.get(key) // e.g. [0,*] or [1,*] or [1]
-					String desc = propDesc[key]
-					writeField(writer,attr,outType, (multiplicityValue && multiplicityValue != '[1]' && multiplicityValue != '[0,1]' ))
+					String pdesc = propDesc[key]
+					writeField(writer,attr,outType, (multiplicityValue && multiplicityValue != '[1]' && multiplicityValue != '[0,1]' ),pdesc)
 
 				} // foreach namedAttrs
 			}
@@ -371,7 +399,13 @@ class CoffeescriptGenerator extends XmiParser {
 	} // createDetailPage()
 
 
-	void writeField(writer,name, type, multi){
+	void writeField(writer,name, type, multi,desc){
+		if(desc){
+			writer.ln("###*");
+			writer.ln(desc)
+			writer.ln("### ")
+
+		}
 		def prim = primitiveTypes.contains(type)
 		if(multi ){
 			writeMultiField(writer,name,type,prim)
@@ -405,6 +439,38 @@ class CoffeescriptGenerator extends XmiParser {
 		writer.eb(" ")
 		writer.puts(" ")
 
+	}
+
+	void writeHeader(writer){
+		writer.ln("# Copyright (c) 2014 The MITRE Corporation");
+		writer.ln("# All rights reserved.");
+		writer.ln("# ");
+		writer.ln("# Redistribution and use in source and binary forms, with or without modification, ");
+		writer.ln("# are permitted provided that the following conditions are met:");
+		writer.ln("# ");
+		writer.ln("#     * Redistributions of source code must retain the above copyright notice, this ");
+		writer.ln("#       list of conditions and the following disclaimer.");
+		writer.ln("#     * Redistributions in binary form must reproduce the above copyright notice, ");
+		writer.ln("#       this list of conditions and the following disclaimer in the documentation ");
+		writer.ln("#       and/or other materials provided with the distribution.");
+		writer.ln("#     * Neither the name of HL7 nor the names of its contributors may be used to ");
+		writer.ln("#       endorse or promote products derived from this software without specific ");
+		writer.ln("#       prior written permission.");
+		writer.ln("# ");
+		writer.ln("# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND ");
+		writer.ln("# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED ");
+		writer.ln("# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. ");
+		writer.ln("# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, ");
+		writer.ln("# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT ");
+		writer.ln("# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR ");
+		writer.ln("# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, ");
+		writer.ln("# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ");
+		writer.ln("# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE ");
+		writer.ln("# POSSIBILITY OF SUCH DAMAGE.");
+		writer.ln("###*");
+		writer.ln("@namespacing scoping into the QUICK namespace");
+		writer.ln("###");
+		writer.ln("this.QUICK ||= {}");
 	}
 
 	// ---------------------------------------------------------
@@ -626,6 +692,10 @@ class CoffeescriptGenerator extends XmiParser {
 		String currentIndent = ""
 		WrappedWriter(writer){
 			this.writer = writer
+		}
+
+		void ln(String string){
+			puts(string)
 		}
 		void puts(String string){
 			put(string)
