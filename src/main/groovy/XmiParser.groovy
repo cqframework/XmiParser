@@ -158,7 +158,7 @@ attribute types:
   /**
    * mapping of xmi:id to class or interface name (e.g. EAID_71D3FE18_1F0A_49b9_BAFD_68D96B9A32C9 => Participant)
    */
-  final Map<String,String> classId = new HashMap<>()
+  final Map<String, String> classId = new HashMap<>()
 
   /**
    * mapping of package element ids to package names (e.g. EAPK_E7E54777_F262_4fe3_AA8E_6E7DDA4E1CB6 => core)
@@ -326,10 +326,11 @@ XmiParser(File file) {
 
 // -----------------------------------------------
 
+/**
+ * Initializes interfaceMap, parents, multiplicity, and propDesc collections.
+ * If any subclass overrides init() then it must call super.init()
+ */
 void init() {
-  // ---------------------------------------------------------
-  // initialize interfaceMap + parents fields
-  // ---------------------------------------------------------
   connectors.connector.each {
       def target = it.target
       def targetModel = target.model

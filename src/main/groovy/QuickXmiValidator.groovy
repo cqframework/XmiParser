@@ -18,6 +18,7 @@ public class QuickXmiValidator extends XmiValidator {
   }
 
   void init() {
+    // if override init() must call parent init()
     super.init()
     def elt = elements.get('ClinicalStatement')
     if (elt == null) throw new IllegalStateException()
