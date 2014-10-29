@@ -19,12 +19,22 @@ import groovy.util.slurpersupport.Attribute
  */
 class XmiValidator extends XmiParser {
 
+  // following two fields are populated in populateElement()
+  // and made available when validateAttributes() is called
+
+  /*
+  * attributes contains a list of attributes as strings with each group of attributes
+  * preceded in list with the Attributes object that contained it which has
+  * the parent element name.
+  */
+  protected Collection attributes
+  protected Set<String> subinterfaces
+
   XmiValidator(File file) {
     super(file)
   }
 
   void validate() {
-
     // check consistent abstract of elements with same parents
     boolean hasMismatch = false
     Map<String, AbstractStat> abstractMap = new HashMap<String, AbstractStat>()
@@ -67,97 +77,116 @@ class XmiValidator extends XmiParser {
         return
       }
       if (elt == null) return
-      String type = elt.'@xmi:type'.text()
-      boolean isInterface = type == 'uml:Interface'
-      Set<String> parentNames = parents.get(name)
-      if (!isInterface && parentNames) {
-        if (parentNames.size() > 1) println "WARN: multiple class inheritance $name : ${parentNames.size()} $parentNames"
-      }
 
-      Collection namedAttrs = new ArrayList()
-      checkAttributes(elt, namedAttrs)
+      populateElement(elt, name)
 
-      // recursively add attributes from parents
-      if (parentNames) {
-        Set<String> visitedClasses = new HashSet<>()
-        parentNames.each { String parentName ->
-          def parent = elements.get(parentName)
-          if (parent && visitedClasses.add(parentName)) {
-            // println "\t$parentName"
-            checkAttributes(parent, namedAttrs)
-            // allow for multiple inheritance
-            checkParents(parentName, namedAttrs, name, visitedClasses)
-          }
-        }
-      }
-
-      Set subinterfaces = new TreeSet()
-      def ref = interfaceMap[name]
-      if (ref) {
-        // All Known Subinterfaces: e.g. ObjectInput extends DataInput interface
-        while (ref) {
-          subinterfaces.add(ref)
-          ref = interfaceMap[ref]
-        }
-      } // if ref
-
-      if (!isInterface) {
-        // class
-        def refs = connectors.connector.findAll {
-          it.source.model.@name == name && it.target.model.@type == 'Interface' && it.properties.@ea_type == 'Realisation'
-          // ignores Aggregation and Association connections
-        }
-        /*
-        EncounterEvent: ActionPerformance Class
-        EncounterEvent: Condition Class
-        EncounterEvent: Condition Class
-        EncounterEvent: Condition Class
-        EncounterEvent: EncounterDescriptor Interface
-        EncounterEvent: Performance Interface
-        EncounterRequest > interface Order
-        etc.
-       */
-        if (!refs.isEmpty()) {
-          refs.each {
-            def tgtName = it.target.model.@name.text()
-            // recursively add interfaces and their super-interfaces; e.g. CommunicationOrder <= Order <= ActionPhase
-            while (tgtName && subinterfaces.add(tgtName)) {
-              tgtName = interfaceMap[tgtName]
-            }
-          }
-        } // if refs
-      } // if class
-
-      // add attributes and aggregate connections from interfaces
-      if (subinterfaces) {
-        subinterfaces.each {
-          def parent = elements.get(it)
-          checkAttributes(parent, namedAttrs)
-        }
-      }
-
-      if (namedAttrs) {
-        def attrsSet = new HashSet()
-        def sortedAttrMap = new TreeMap<String, String>()
-        String parentName
-        namedAttrs.each { attr ->
-          if (attr instanceof groovy.util.slurpersupport.Attributes) {
-            parentName = attr.text()
-            //println "XX: $parentName"
-          } else {
-            String oldValue = sortedAttrMap.put(attr, parentName)
-            if (oldValue != null && oldValue != parentName) println "ERROR: attribute conflict: $attr $oldValue $parentName"
-            if (!attrsSet.add(attr)) println "WARN: duplicate attribute $attr in $name"
-            //println "\t$attr"
-          }
-        }
+      if (!attributes.isEmpty()) {
+        validateAttributes(packageName, elt, name)
       }
     }
   } // validate
 
   // -----------------------------------------------
 
-  void checkAttributes(elt, Collection namedAttrs) {
+  /**
+   * Validate collection of attributes of given element.
+   *
+   * @param elt element to validate
+   * @param name name of element
+   */
+  void validateAttributes(String packageName, elt, String name) {
+    def attrsSet = new HashSet()
+    def sortedAttrMap = new TreeMap<String, String>()
+    String parentName
+    attributes.each { attr ->
+      if (attr instanceof groovy.util.slurpersupport.Attributes) {
+        parentName = attr.text()
+        //println "XX: $parentName"
+      } else {
+        String oldValue = sortedAttrMap.put(attr, parentName)
+        if (oldValue != null && oldValue != parentName) println "ERROR: attribute conflict: $attr $oldValue $parentName"
+        if (!attrsSet.add(attr)) println "WARN: duplicate attribute $attr in $name"
+        //println "\t$attr"
+      }
+    }
+  }
+
+  // -----------------------------------------------
+
+  void populateElement(elt, String name) {
+    String type = elt.'@xmi:type'.text()
+    boolean isInterface = type == 'uml:Interface'
+    Set<String> parentNames = parents.get(name)
+    if (!isInterface && parentNames) {
+      if (parentNames.size() > 1) println "INFO: multiple class inheritance $name : ${parentNames.size()} $parentNames"
+    }
+
+    attributes = new ArrayList()
+    checkAttributes(elt)
+
+    // recursively add attributes from parents
+    if (parentNames) {
+      Set<String> visitedClasses = new HashSet<>()
+      parentNames.each { String parentName ->
+        def parent = elements.get(parentName)
+        if (parent && visitedClasses.add(parentName)) {
+          // println "\t$parentName"
+          checkAttributes(parent)
+          // allow for multiple inheritance
+          checkParents(parentName, name, visitedClasses)
+        }
+      }
+    }
+
+    subinterfaces = new TreeSet<String>()
+    def ref = interfaceMap[name]
+    if (ref) {
+      // All Known Subinterfaces: e.g. ObjectInput extends DataInput interface
+      while (ref) {
+        subinterfaces.add(ref)
+        ref = interfaceMap[ref]
+      }
+    } // if ref
+
+    if (!isInterface) {
+      // class
+      def refs = connectors.connector.findAll {
+        it.source.model.@name == name && it.target.model.@type == 'Interface' && it.properties.@ea_type == 'Realisation'
+        // ignores Aggregation and Association connections
+      }
+      /*
+      EncounterEvent: ActionPerformance Class
+      EncounterEvent: Condition Class
+      EncounterEvent: Condition Class
+      EncounterEvent: Condition Class
+      EncounterEvent: EncounterDescriptor Interface
+      EncounterEvent: Performance Interface
+      EncounterRequest > interface Order
+      etc.
+     */
+      if (!refs.isEmpty()) {
+        refs.each {
+          def tgtName = it.target.model.@name.text()
+          // recursively add interfaces and their super-interfaces; e.g. CommunicationOrder <= Order <= ActionPhase
+          while (tgtName && subinterfaces.add(tgtName)) {
+            tgtName = interfaceMap[tgtName]
+          }
+        }
+      } // if refs
+    } // if class
+
+    // add attributes and aggregate connections from interfaces
+    if (subinterfaces) {
+      subinterfaces.each {
+        def parent = elements.get(it)
+        checkAttributes(parent)
+      }
+    }
+  }
+
+  // -----------------------------------------------
+
+  protected void checkAttributes(elt) {
     int atCnt = 0
     def eltName = elt.@name
     //boolean self = targetName == null
@@ -173,21 +202,21 @@ class XmiValidator extends XmiParser {
     elt.ownedAttribute.each {
       def attrName = it.@name.text()
       if (attrName) {
-        if (atCnt++ == 0) namedAttrs.add(eltName) // add attribute for element that attributes are contained within
-        namedAttrs.add(attrName) // String
+        if (atCnt++ == 0) attributes.add(eltName) // add attribute for element that attributes are contained within
+        attributes.add(attrName) // String
       }
     }
-    dumpAggregates(elt, namedAttrs, atCnt, eltName.text())
+    dumpAggregates(elt, atCnt, eltName.text())
   }
 
   // -----------------------------------------------
 
-  void dumpAggregates(elt, Collection namedAttrs, int atCnt, String name) {
+  private void dumpAggregates(elt, int atCnt, String name) {
     def aggregateList = aggregation.get(name)
     if (aggregateList) {
-      if (atCnt == 0 || namedAttrs.isEmpty()) {
+      if (atCnt == 0 || attributes.isEmpty()) {
         // first element must be name attribute
-        namedAttrs.add(new groovy.util.slurpersupport.Attributes(
+        attributes.add(new groovy.util.slurpersupport.Attributes(
                 new Attribute('name', name, elt, '', EMPTY_MAP), 'ownedAttribute', EMPTY_MAP))
       }
     }
@@ -196,14 +225,14 @@ class XmiValidator extends XmiParser {
   // -----------------------------------------------
 
   @TypeChecked
-  void checkParents(String parentName, Collection namedAttrs, String name, Set visitedClasses) {
+  protected void checkParents(String parentName, String name, Set visitedClasses) {
     Set<String> parentNames = parents.get(parentName)
     parentNames.each { String pName ->
       def parent = elements.get(pName)
       if (parent && visitedClasses.add(pName)) {
         // println "\t$pName"
-        checkAttributes(parent, namedAttrs)
-        checkParents(pName, namedAttrs, name, visitedClasses)
+        checkAttributes(parent)
+        checkParents(pName, name, visitedClasses)
       } // else println "dup/other: $pName"
     }
   }
