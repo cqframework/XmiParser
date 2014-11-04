@@ -198,7 +198,7 @@ class CoffeescriptGenerator extends XmiParser {
 			return
 		}
 
-
+		Set requires = []
 		String nameOut = escapeName(name) // e.g. for RIM with <'s in names
 		flatListMode = flatList
 
@@ -257,14 +257,16 @@ class CoffeescriptGenerator extends XmiParser {
 			writer.ln(" ")
 		}
 
-		writer.ln("@class $name");
-		writer.ln("@exports  $name as quick.$name");
-		writer.ln("###");
-		writer.puts("class QUICK.$name")
-		writer.sb("constructor: (@json) ->")
-		writer.sb("super()")
-		writer.eb(" ")
-		writer.eb("")
+
+    def bodyWriter = new WrappedWriter(new StringWriter())
+		bodyWriter.ln("@class $name");
+		bodyWriter.ln("@exports  $name as quick.$name");
+		bodyWriter.ln("###");
+		bodyWriter.puts("class QUICK.$name")
+		bodyWriter.sb("constructor: (@json) ->")
+		bodyWriter.sb("super()")
+		bodyWriter.eb(" ")
+		bodyWriter.eb("")
 
 		Collection namedAttrs = new ArrayList()
 		Set subinterfaces = new TreeSet()
@@ -384,7 +386,11 @@ class CoffeescriptGenerator extends XmiParser {
 					String key = "${parentName}.${attr}"
 					String multiplicityValue = multiplicity.get(key) // e.g. [0,*] or [1,*] or [1]
 					String pdesc = propDesc[key]
-					writeField(writer,attr,outType, (multiplicityValue && multiplicityValue != '[1]' && multiplicityValue != '[0,1]' ),pdesc)
+					if(!ignoreTypes.contains(outType) && !(outType == name)){
+						requires.add(outType)
+					}
+					
+					writeField(bodyWriter,attr,outType, (multiplicityValue && multiplicityValue != '[1]' && multiplicityValue != '[0,1]' ),pdesc)
 
 				} // foreach namedAttrs
 			}
@@ -395,6 +401,13 @@ class CoffeescriptGenerator extends XmiParser {
 			propTypes.clear()
 
 		}// if namedAttrs
+		//for each import add a require statement
+		requires.each { req ->
+			writer.put("# =require $req")
+			writer.puts(".js.coffee")
+		}
+			
+		writer.put(bodyWriter.toString())
 		writer.close()
 	} // createDetailPage()
 
@@ -685,8 +698,9 @@ class CoffeescriptGenerator extends XmiParser {
 
 
 
+
 	static class WrappedWriter {
-		java.io.FileWriter writer;
+		java.io.Writer writer;
 		int indent = 0
 		int indentSize = 2
 		String currentIndent = ""
@@ -745,6 +759,10 @@ class CoffeescriptGenerator extends XmiParser {
 		void close(){
 			writer.flush();
 			writer.close()
+		}
+
+		String toString(){
+			writer.toString()
 		}
 	}
 
