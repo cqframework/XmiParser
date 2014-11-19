@@ -202,7 +202,7 @@ class CoffeescriptGenerator extends XmiParser {
 		String nameOut = escapeName(name) // e.g. for RIM with <'s in names
 		flatListMode = flatList
 
-		def writer = new WrappedWriter(new FileWriter("coffeescript/quick/${nameOut}.js.coffee"))
+		def writer = new WrappedWriter(new FileWriter("coffeescript/quick/${nameOut}.coffee"))
 
 
 		// <packagedElement xmi:type="uml:Class"
@@ -257,14 +257,16 @@ class CoffeescriptGenerator extends XmiParser {
 			writer.ln(" ")
 		}
 
+		writer.ln("###")
 
     def bodyWriter = new WrappedWriter(new StringWriter())
+    bodyWriter.ln("###*");
 		bodyWriter.ln("@class $name");
 		bodyWriter.ln("@exports  $name as quick.$name");
 		bodyWriter.ln("###");
 		bodyWriter.puts("class QUICK.$name")
 		bodyWriter.sb("constructor: (@json) ->")
-		bodyWriter.sb("super()")
+		//bodyWriter.sb("super()")
 		bodyWriter.eb(" ")
 		bodyWriter.eb("")
 
@@ -403,21 +405,23 @@ class CoffeescriptGenerator extends XmiParser {
 		}// if namedAttrs
 		//for each import add a require statement
 		requires.each { req ->
-			writer.put("# =require $req")
-			writer.puts(".js.coffee")
+			writer.put("require './$req")
+			writer.puts("'")
 		}
 			
 		writer.put(bodyWriter.toString())
+		writer.puts("")
+		writer.puts("module.exports.QUICK = QUICK")
 		writer.close()
 	} // createDetailPage()
 
 
 	void writeField(writer,name, type, multi,desc){
 		if(desc){
-			writer.ln("###*");
+			writer.sb("###*");
 			writer.ln(desc)
 			writer.ln("### ")
-
+			writer.eb()
 		}
 		def prim = primitiveTypes.contains(type)
 		if(multi ){
@@ -435,10 +439,12 @@ class CoffeescriptGenerator extends XmiParser {
 			writer.puts(" ")
 		}else{
 			writer.sb( "$name: -> ")
+			writer.sb("if @json['$name']")
 			writer.sb("for x in @json['$name'] ")
-			writer.sb("new $type(x)")
+			writer.sb("new QUICK.$type(x)")
 			writer.eb(" ")
-			writer.eb(" ")
+			writer.eb()
+			writer.eb()
 			writer.eb()
 		}
 
@@ -448,7 +454,7 @@ class CoffeescriptGenerator extends XmiParser {
 		if(primitive)
 			writer.sb("$name: ->  @json['$name'] ")
 		else
-			writer.sb("$name: -> new $type( @json['$name'] )")
+			writer.sb("$name: -> if @json['$name'] then new QUICK.$type( @json['$name'] )")
 		writer.eb(" ")
 		writer.puts(" ")
 
