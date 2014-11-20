@@ -120,7 +120,7 @@ class CoffeescriptGenerator extends XmiParser {
 	private String lastParent
 	private boolean multiParentAttributes
 	private String summaryDescription
-
+	private Set models = []
 	// -----------------------------------------------
 
 	CoffeescriptGenerator(File file) {
@@ -151,6 +151,7 @@ class CoffeescriptGenerator extends XmiParser {
 		if (outWriter) {
 			outWriter.close() // debug
 		}
+		writeModelIndex()
 	}
 
 
@@ -187,6 +188,15 @@ class CoffeescriptGenerator extends XmiParser {
 		} // each element
 	} // createDetailPages()
 
+  void writeModelIndex(){
+  	def includeWriter = new WrappedWriter(new FileWriter("coffeescript/quick/models.coffee"))
+  	includeWriter.puts("this.QUICK || {}")
+  	models.each {name ->
+  		includeWriter.puts("QUICK.$name = require './$name'")
+  	}
+  	includeWriter.puts("module.exports.QUICK = QUICK")
+  	includeWriter.close()
+  }
 	// ---------------------------------------------------------
 	// create class detail page
 	// ---------------------------------------------------------
@@ -203,7 +213,7 @@ class CoffeescriptGenerator extends XmiParser {
 		flatListMode = flatList
 
 		def writer = new WrappedWriter(new FileWriter("coffeescript/quick/${nameOut}.coffee"))
-
+		models.add(name)
 
 		// <packagedElement xmi:type="uml:Class"
 		// <packagedElement xmi:type="uml:Interface"
@@ -262,9 +272,9 @@ class CoffeescriptGenerator extends XmiParser {
     def bodyWriter = new WrappedWriter(new StringWriter())
     bodyWriter.ln("###*");
 		bodyWriter.ln("@class $name");
-		bodyWriter.ln("@exports  $name as quick.$name");
+		bodyWriter.ln("@exports  $name as $name");
 		bodyWriter.ln("###");
-		bodyWriter.puts("class QUICK.$name")
+		bodyWriter.puts("class $name")
 		bodyWriter.sb("constructor: (@json) ->")
 		//bodyWriter.sb("super()")
 		bodyWriter.eb(" ")
@@ -411,8 +421,9 @@ class CoffeescriptGenerator extends XmiParser {
 			
 		writer.put(bodyWriter.toString())
 		writer.puts("")
-		writer.puts("module.exports.QUICK = QUICK")
+		writer.puts("module.exports.$name = $name")
 		writer.close()
+
 	} // createDetailPage()
 
 
